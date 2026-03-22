@@ -4,26 +4,55 @@ import { useAuth } from '../../context/AuthContext'
 import toast from 'react-hot-toast'
 import { Truck } from 'lucide-react'
 
+function getErrorMessage(err) {
+  // Spring Boot validation errors — map of field -> message
+  if (err.response?.data?.data && typeof err.response.data.data === 'object') {
+    const entries = Object.entries(err.response.data.data)
+    if (entries.length > 0) {
+      // Show all field errors, one per line
+      return entries.map(([field, msg]) => `${field}: ${msg}`).join('\n')
+    }
+  }
+  // Our ApiResponse message field
+  if (err.response?.data?.message) return err.response.data.message
+  // Spring Security default error body
+  if (err.response?.data?.error) return err.response.data.error
+  // Network / no response
+  if (!err.response) return 'Cannot connect to server. Make sure the backend is running.'
+  if (err.response?.status === 409) return 'An account with this email already exists.'
+  if (err.response?.status === 400) return 'Invalid details. Please check your input.'
+  if (err.response?.status === 500) return 'Server error. Please try again later.'
+  return 'Registration failed. Please try again.'
+}
+
 export default function RegisterPage() {
   const { register } = useAuth()
   const navigate = useNavigate()
   const [form, setForm] = useState({ fullName:'', email:'', password:'', phone:'', role:'CUSTOMER' })
   const [loading, setLoading] = useState(false)
+  const [error, setError]     = useState('')
 
-  const set = k => e => setForm(f => ({ ...f, [k]: e.target.value }))
+  const set = k => e => {
+    setError('')
+    setForm(f => ({ ...f, [k]: e.target.value }))
+  }
 
   const submit = async e => {
     e.preventDefault()
-    const { fullName, email, password, phone, role } = form
-    if (!fullName || !email || !password || !phone) return toast.error('Please fill all fields')
-    if (password.length < 6) return toast.error('Password must be at least 6 characters')
+    setError('')
+    const { fullName, email, password, phone } = form
+    if (!fullName) return setError('Full name is required.')
+    if (!email)    return setError('Email address is required.')
+    if (!phone)    return setError('Phone number is required.')
+    if (!password) return setError('Password is required.')
+    if (password.length < 6) return setError('Password must be at least 6 characters.')
     setLoading(true)
     try {
       const user = await register(form)
       toast.success(`Account created! Welcome, ${user.fullName.split(' ')[0]}!`)
       navigate('/dashboard')
     } catch (err) {
-      toast.error(err.response?.data?.message || 'Registration failed')
+      setError(getErrorMessage(err))
     } finally {
       setLoading(false)
     }
@@ -44,6 +73,19 @@ export default function RegisterPage() {
 
         <h2 className="auth-title">Get started</h2>
         <p className="auth-sub">Fill in the details below to register</p>
+
+        {error && (
+          <div style={{
+            background:'#fee2e2', border:'1px solid #fca5a5',
+            borderRadius:8, padding:'10px 14px', marginBottom:16,
+            color:'#991b1b', fontSize:13.5,
+            display:'flex', alignItems:'flex-start', gap:8,
+            whiteSpace: 'pre-line',
+          }}>
+            <span style={{ flexShrink:0 }}>⚠️</span>
+            <span>{error}</span>
+          </div>
+        )}
 
         <form onSubmit={submit}>
           <div className="form-group">

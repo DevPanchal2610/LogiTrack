@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import AppLayout from '../../components/layout/AppLayout'
 import StatusBadge from '../../components/ui/StatusBadge'
@@ -7,6 +7,7 @@ import { useAuth } from '../../context/AuthContext'
 import { ArrowLeft, MapPin, Package, Calendar, User, CheckCircle, Edit3, X } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { useNotif } from '../../context/NotifContext'
+import useDataSync from '../../hooks/useDataSync'
 
 const STATUSES = ['CREATED','PICKED_UP','IN_TRANSIT','OUT_FOR_DELIVERY','DELIVERED','FAILED_DELIVERY','RETURNED','CANCELLED']
 
@@ -30,15 +31,25 @@ export default function ShipmentDetailPage() {
   const [updating, setUpdating] = useState(false)
   const [statusForm, setStatusForm] = useState({ newStatus:'', location:'', remarks:'' })
 
-  const load = async () => {
+  const load = useCallback(async () => {
     try {
       const res = await shipmentApi.getById(id)
       setShipment(res.data.data)
-    } catch { toast.error('Shipment not found') }
-    finally { setLoading(false) }
+    } catch (err) {
+  if (err.response?.status === 403) {
+    toast.error('Access denied — this shipment does not belong to you')
+  } else {
+    toast.error('Shipment not found')
   }
+  navigate('/shipments')
+}
+    finally { setLoading(false) }
+  }, [id])
 
-  useEffect(() => { load() }, [id])
+  useEffect(() => { load() }, [load])
+
+  // Auto-refresh this page when a STATUS_UPDATE event arrives for this shipment
+useDataSync(load)
 
   const submitStatus = async e => {
     e.preventDefault()

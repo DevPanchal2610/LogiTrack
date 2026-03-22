@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import AppLayout from '../../components/layout/AppLayout'
 import StatusBadge from '../../components/ui/StatusBadge'
@@ -6,6 +6,7 @@ import { shipmentApi } from '../../services/api'
 import { useAuth } from '../../context/AuthContext'
 import { Package, Search, Plus } from 'lucide-react'
 import toast from 'react-hot-toast'
+import useDataSync from '../../hooks/useDataSync'
 
 export default function ShipmentsPage() {
   const { isAdmin, isVendor } = useAuth()
@@ -16,16 +17,17 @@ export default function ShipmentsPage() {
   const [search, setSearch]       = useState('')
   const [statusFilter, setStatusFilter] = useState('ALL')
 
-  const load = async () => {
+  const load = useCallback(async () => {
     setLoading(true)
     try {
       const res = await shipmentApi.getMine()
       setShipments(res.data.data || [])
     } catch { toast.error('Failed to load shipments') }
     finally { setLoading(false) }
-  }
+  }, [])
 
-  useEffect(() => { load() }, [])
+  useEffect(() => { load() }, [load])
+  useDataSync(load)
 
   useEffect(() => {
     let data = shipments

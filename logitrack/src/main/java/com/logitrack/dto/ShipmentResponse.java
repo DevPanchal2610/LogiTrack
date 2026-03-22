@@ -23,6 +23,8 @@ public class ShipmentResponse {
     private String vendorName;
     private String customerName;
     private String customerEmail;
+    private Long vendorId;
+    private Long customerId;
     private LocalDateTime createdAt;
     private LocalDateTime estimatedDelivery;
     private LocalDateTime actualDelivery;

@@ -1,7 +1,8 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import AppLayout from '../../components/layout/AppLayout'
 import { adminApi } from '../../services/api'
 import { Package, TrendingUp, CheckCircle, AlertTriangle, Users, Truck, BarChart3 } from 'lucide-react'
+import useDataSync from '../../hooks/useDataSync'
 
 function DonutChart({ segments, size = 140 }) {
   const r = 50, cx = 70, cy = 70
@@ -56,7 +57,7 @@ export default function AdminAnalyticsPage() {
   const [users, setUsers]         = useState([])
   const [loading, setLoading]     = useState(true)
 
-  useEffect(() => {
+  const load = useCallback(async () => {
     Promise.all([adminApi.getAllShipments(), adminApi.getAllUsers()])
       .then(([s, u]) => {
         setShipments(s.data.data || [])
@@ -65,6 +66,9 @@ export default function AdminAnalyticsPage() {
       .catch(() => {})
       .finally(() => setLoading(false))
   }, [])
+
+  useEffect(() => { load() }, [load])
+  useDataSync(load)
 
   // Status breakdown
   const STATUS_COLORS = {

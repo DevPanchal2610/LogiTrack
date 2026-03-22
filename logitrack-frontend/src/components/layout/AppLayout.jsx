@@ -1,5 +1,6 @@
 import Sidebar from './Sidebar'
 import Topbar from './Topbar'
+import AIChatbot from '../ui/AIChatbot'
 
 export default function AppLayout({ title, children }) {
   return (
@@ -9,6 +10,7 @@ export default function AppLayout({ title, children }) {
         <Topbar title={title} />
         <main className="page-body">{children}</main>
       </div>
+      <AIChatbot />
     </div>
   )
 }

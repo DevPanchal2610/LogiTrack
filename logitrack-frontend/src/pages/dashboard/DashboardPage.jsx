@@ -1,8 +1,9 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Package, Truck, CheckCircle, Clock, AlertTriangle, TrendingUp, Plus, Search } from 'lucide-react'
 import AppLayout from '../../components/layout/AppLayout'
 import StatusBadge from '../../components/ui/StatusBadge'
+import useDataSync from '../../hooks/useDataSync'
 import { shipmentApi, adminApi } from '../../services/api'
 import { useAuth } from '../../context/AuthContext'
 
@@ -14,18 +15,19 @@ export default function DashboardPage() {
   const [shipments, setShipments] = useState([])
   const [loading, setLoading]     = useState(true)
 
-  useEffect(() => {
-    const fetch = async () => {
-      try {
-        const res = isAdmin
-          ? await adminApi.getAllShipments()
-          : await shipmentApi.getMine()
-        setShipments(res.data.data || [])
-      } catch { /* handled by interceptor */ }
-      finally { setLoading(false) }
-    }
-    fetch()
+  const load = useCallback(async () => {
+    setLoading(true)
+    try {
+      const res = isAdmin
+        ? await adminApi.getAllShipments()
+        : await shipmentApi.getMine()
+      setShipments(res.data.data || [])
+    } catch { }
+    finally { setLoading(false) }
   }, [isAdmin])
+
+  useEffect(() => { load() }, [load])
+  useDataSync(load)
 
   const count = status => shipments.filter(s => s.currentStatus === status).length
   const total     = shipments.length

@@ -5,6 +5,7 @@ import com.logitrack.dto.CreateShipmentRequest;
 import com.logitrack.dto.ShipmentResponse;
 import com.logitrack.dto.UpdateStatusRequest;
 import com.logitrack.entity.User;
+import com.logitrack.enums.Role;
 import com.logitrack.service.ShipmentService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -46,6 +47,14 @@ public class ShipmentController {
             @Valid @RequestBody UpdateStatusRequest request,
             @AuthenticationPrincipal User currentUser) {
 
+        ShipmentResponse existing = shipmentService.getById(id);
+
+        if (currentUser.getRole() == Role.VENDOR &&
+                !existing.getVendorId().equals(currentUser.getId())) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body(ApiResponse.error("Access denied: you can only update your own shipments"));
+        }
+
         ShipmentResponse response = shipmentService.updateStatus(id, request, currentUser);
         return ResponseEntity.ok(ApiResponse.ok("Status updated successfully", response));
     }
@@ -67,8 +76,25 @@ public class ShipmentController {
      * Get full shipment details by ID (authenticated users)
      */
     @GetMapping("/{id}")
-    public ResponseEntity<ApiResponse<ShipmentResponse>> getById(@PathVariable Long id) {
+    public ResponseEntity<ApiResponse<ShipmentResponse>> getById(
+            @PathVariable Long id,
+            @AuthenticationPrincipal User currentUser) {
+
         ShipmentResponse response = shipmentService.getById(id);
+
+        if (currentUser.getRole() != Role.ADMIN) {
+            if (currentUser.getRole() == Role.VENDOR &&
+                    !response.getVendorId().equals(currentUser.getId())) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                        .body(ApiResponse.error("Access denied: this shipment does not belong to you"));
+            }
+            if (currentUser.getRole() == Role.CUSTOMER &&
+                    !response.getCustomerId().equals(currentUser.getId())) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                        .body(ApiResponse.error("Access denied: this shipment does not belong to you"));
+            }
+        }
+
         return ResponseEntity.ok(ApiResponse.ok("Shipment retrieved", response));
     }
 

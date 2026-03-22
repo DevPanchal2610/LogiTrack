@@ -4,24 +4,49 @@ import { useAuth } from '../../context/AuthContext'
 import toast from 'react-hot-toast'
 import { Truck } from 'lucide-react'
 
+function getErrorMessage(err) {
+  // Spring Boot validation errors — map of field -> message
+  if (err.response?.data?.data && typeof err.response.data.data === 'object') {
+    const fieldErrors = Object.values(err.response.data.data)
+    if (fieldErrors.length > 0) return fieldErrors[0]
+  }
+  // Our ApiResponse message field
+  if (err.response?.data?.message) return err.response.data.message
+  // Spring Security default error body
+  if (err.response?.data?.error) return err.response.data.error
+  // Network / no response
+  if (!err.response) return 'Cannot connect to server. Make sure the backend is running.'
+  // HTTP status fallbacks
+  if (err.response?.status === 401) return 'Invalid email or password.'
+  if (err.response?.status === 403) return 'Access denied.'
+  if (err.response?.status === 500) return 'Server error. Please try again later.'
+  return 'Something went wrong. Please try again.'
+}
+
 export default function LoginPage() {
   const { login } = useAuth()
-  const navigate   = useNavigate()
-  const [form, setForm]   = useState({ email: '', password: '' })
+  const navigate  = useNavigate()
+  const [form, setForm]     = useState({ email: '', password: '' })
   const [loading, setLoading] = useState(false)
+  const [error, setError]     = useState('')
 
-  const set = k => e => setForm(f => ({ ...f, [k]: e.target.value }))
+  const set = k => e => {
+    setError('')
+    setForm(f => ({ ...f, [k]: e.target.value }))
+  }
 
   const submit = async e => {
     e.preventDefault()
-    if (!form.email || !form.password) return toast.error('Please fill all fields')
+    setError('')
+    if (!form.email)    return setError('Email address is required.')
+    if (!form.password) return setError('Password is required.')
     setLoading(true)
     try {
       const user = await login(form.email, form.password)
       toast.success(`Welcome back, ${user.fullName.split(' ')[0]}!`)
       navigate('/dashboard')
     } catch (err) {
-      toast.error(err.response?.data?.message || 'Invalid credentials')
+      setError(getErrorMessage(err))
     } finally {
       setLoading(false)
     }
@@ -37,11 +62,23 @@ export default function LoginPage() {
             </div>
             <h1>Logi<span>Track</span></h1>
           </div>
-          <p>Shipment & Supply Chain Management</p>
+          <p>Shipment &amp; Supply Chain Management</p>
         </div>
 
         <h2 className="auth-title">Sign in to your account</h2>
         <p className="auth-sub">Enter your credentials to continue</p>
+
+        {error && (
+          <div style={{
+            background:'#fee2e2', border:'1px solid #fca5a5',
+            borderRadius:8, padding:'10px 14px', marginBottom:16,
+            color:'#991b1b', fontSize:13.5,
+            display:'flex', alignItems:'flex-start', gap:8,
+          }}>
+            <span style={{ flexShrink:0 }}>⚠️</span>
+            <span>{error}</span>
+          </div>
+        )}
 
         <form onSubmit={submit}>
           <div className="form-group">
@@ -55,22 +92,12 @@ export default function LoginPage() {
               value={form.password} onChange={set('password')} />
           </div>
 
-          <button className="btn btn-primary" style={{ width:'100%', justifyContent:'center', padding:'11px' }}
+          <button className="btn btn-primary"
+            style={{ width:'100%', justifyContent:'center', padding:'11px' }}
             disabled={loading}>
             {loading ? <span className="spinner" /> : 'Sign In'}
           </button>
         </form>
-
-        <div className="auth-divider"><span>or try demo</span></div>
-
-        <div style={{ display:'flex', gap:8 }}>
-          {[['Admin','admin@logitrack.com'],['Vendor','vendor@logitrack.com'],['Customer','customer@logitrack.com']].map(([role,email]) => (
-            <button key={role} className="btn btn-ghost btn-sm" style={{ flex:1, justifyContent:'center' }}
-              onClick={() => setForm({ email, password:'demo123' })}>
-              {role}
-            </button>
-          ))}
-        </div>
 
         <div className="auth-footer">
           Don't have an account? <Link to="/register">Create one</Link>

@@ -13,7 +13,8 @@ api.interceptors.request.use(config => {
 api.interceptors.response.use(
   res => res,
   err => {
-    if (err.response?.status === 401) {
+    // AFTER — only redirect if user was already logged in
+    if (err.response?.status === 401 && localStorage.getItem('lt_token')) {
       localStorage.removeItem('lt_token')
       localStorage.removeItem('lt_user')
       window.location.href = '/login'
@@ -45,6 +46,33 @@ export const adminApi = {
   getVendors:     () => api.get('/admin/users/vendors'),
   getCustomers:   () => api.get('/admin/users/customers'),
   deleteUser:     id => api.delete(`/admin/users/${id}`),
+}
+
+export function createNotificationStream(onMessage, onError) {
+  const token = localStorage.getItem('lt_token')
+  if (!token) return null
+
+  const url = `/api/notifications/subscribe`
+  const eventSource = new EventSource(url + '?token=' + token)
+
+  eventSource.addEventListener('notification', (e) => {
+    try {
+      const data = JSON.parse(e.data)
+      onMessage(data)
+    } catch {}
+  })
+
+  eventSource.addEventListener('connected', () => {
+    console.log('Connected to notification stream')
+  })
+
+  eventSource.onerror = (e) => {
+    if (onError) onError(e)
+    // Auto-reconnect after 3 seconds
+    setTimeout(() => eventSource.close(), 3000)
+  }
+
+  return eventSource
 }
 
 export default api

@@ -15,6 +15,7 @@ import com.logitrack.repository.ShipmentRepository;
 import com.logitrack.repository.ShipmentStatusHistoryRepository;
 import com.logitrack.repository.UserRepository;
 import com.logitrack.service.EmailNotificationService;
+import com.logitrack.service.NotificationService;
 import com.logitrack.service.ShipmentService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -33,6 +34,7 @@ public class ShipmentServiceImpl implements ShipmentService {
     private final ShipmentStatusHistoryRepository historyRepository;
     private final UserRepository userRepository;
     private final EmailNotificationService emailService;
+    private final NotificationService notificationService;
 
     // ----------------------------------------------------------------
     // Create
@@ -68,7 +70,19 @@ public class ShipmentServiceImpl implements ShipmentService {
 
         // Fire async email notification
         emailService.sendShipmentCreatedEmail(shipment);
-
+        // Notify the customer in real time
+        notificationService.sendToUser(
+                customer.getId(),
+                "SHIPMENT_CREATED",
+                "New shipment created for you: " + shipment.getTrackingNumber(),
+                shipment.getId()   // ← add shipmentId
+        );
+        // Notify all admins
+        notificationService.sendToAll(
+                "SHIPMENT_CREATED",
+                "New shipment " + shipment.getTrackingNumber() + " created by " + vendor.getFullName(),
+                shipment.getId()
+        );
         return toResponse(shipment);
     }
 
@@ -98,7 +112,27 @@ public class ShipmentServiceImpl implements ShipmentService {
 
         // Fire async email notification
         emailService.sendStatusUpdateEmail(shipment, request.getNewStatus(), request.getLocation());
+        String statusMsg = shipment.getTrackingNumber() + " is now "
+                + request.getNewStatus().name().replace("_", " ");
 
+        // Notify customer
+        notificationService.sendToUser(
+                shipment.getCustomer().getId(),
+                "STATUS_UPDATE",
+                "Your shipment " + statusMsg,
+                shipment.getId()   // ← add shipmentId
+        );
+
+        //Notify Vendor
+        notificationService.sendToUser(
+                shipment.getVendor().getId(),
+                "STATUS_UPDATE",
+                "Shipment " + statusMsg,
+                shipment.getId()   // ← add shipmentId
+        );
+
+        // Notify all admins
+        notificationService.sendToAll("STATUS_UPDATE", "Shipment " + statusMsg, shipment.getId());
         return toResponse(shipment);
     }
 
@@ -216,6 +250,8 @@ public class ShipmentServiceImpl implements ShipmentService {
                 .vendorName(shipment.getVendor().getFullName())
                 .customerName(shipment.getCustomer().getFullName())
                 .customerEmail(shipment.getCustomer().getEmail())
+                .vendorId(shipment.getVendor().getId())
+                .customerId(shipment.getCustomer().getId())
                 .createdAt(shipment.getCreatedAt())
                 .estimatedDelivery(shipment.getEstimatedDelivery())
                 .actualDelivery(shipment.getActualDelivery())

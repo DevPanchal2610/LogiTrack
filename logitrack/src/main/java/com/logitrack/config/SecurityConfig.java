@@ -45,6 +45,8 @@ public class SecurityConfig {
                 .requestMatchers("/api/shipments/create").hasAnyRole("VENDOR", "ADMIN")
                 .requestMatchers("/api/shipments/*/status").hasAnyRole("VENDOR", "ADMIN")
 
+                .requestMatchers("/api/notifications/**").authenticated()
+
                 // All authenticated users
                 .anyRequest().authenticated()
             )
