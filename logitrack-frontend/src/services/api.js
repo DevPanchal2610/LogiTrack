@@ -1,6 +1,8 @@
 import axios from 'axios'
 
-const api = axios.create({ baseURL: '/api' })
+const api = axios.create({
+  baseURL: import.meta.env.VITE_API_URL || '/api'
+})
 
 // Attach JWT to every request
 api.interceptors.request.use(config => {
@@ -52,8 +54,9 @@ export function createNotificationStream(onMessage, onError) {
   const token = localStorage.getItem('lt_token')
   if (!token) return null
 
-  const url = `/api/notifications/subscribe`
-  const eventSource = new EventSource(url + '?token=' + token)
+  const baseUrl = import.meta.env.VITE_API_URL || ''
+  const url = `${baseUrl}/api/notifications/subscribe?token=${token}`
+  const eventSource = new EventSource(url)
 
   eventSource.addEventListener('notification', (e) => {
     try {
