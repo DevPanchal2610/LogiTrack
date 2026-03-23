@@ -89,7 +89,7 @@ public class SecurityConfig {
         config.setAllowedOriginPatterns(List.of(
                 "http://localhost:3000",
                 "https://*.vercel.app",
-                "https://logitrack.vercel.app"
+                "https://logi-track-indol.vercel.app"
         ));
         config.setAllowedMethods(List.of("GET","POST","PUT","DELETE","OPTIONS"));
         config.setAllowedHeaders(List.of("*"));
