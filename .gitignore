@@ -7,3 +7,5 @@ node_modules/
 *.log
 .env
 dist/
+logitrack/src/main/resources/application.properties
+logitrack/src/main/resources/application-local.properties
